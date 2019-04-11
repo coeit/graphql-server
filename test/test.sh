@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Start a local Cassandra server with Docker
+echo -e '\nStarting Cassandra server:'
 docker run --name sdb_cassandra -d --rm -p 7000:7000 -p 7001:7001 -p 7199:7199 -p 9042:9042 cassandra:3.11.4
 
 # Wait until the Cassandra server is up and running
@@ -20,5 +21,5 @@ echo -e '\nCassandra server up and running.\n'
 mocha test/test.js --exit
 
 # Stop Cassandra server and clean up
-echo -e '\nShutting down Cassandra servers.\n'
+echo -e '\nShutting down Cassandra servers:'
 docker stop sdb_cassandra
