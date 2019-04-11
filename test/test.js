@@ -7,13 +7,11 @@ const cassandraMigrator = require(path.join(__dirname, '..', 'utils',
 describe('Client setup and migrations', function() {
 
   it('Should create the default keyspace if it does not exist yet', async function() {
-    // Cassandra takes a bit for creating a keyspace
-    this.timeout(10000)
-
     let cassandraConfig = require(path.join(__dirname, '..',
-      'unit_test_misc', 'cassandra.config.json'))
+      'config', 'cassandra.config.json'))
     let cassandraConfigNoKeyspace = Object.assign({}, cassandraConfig)
     delete cassandraConfigNoKeyspace.keyspace
+    expect(cassandraMigrator).not.to.be.null
     let cassandraClient = new cassandra.Client(
       cassandraConfigNoKeyspace)
     let res = await cassandraMigrator.createKeyspaceIfNotExits({
@@ -22,7 +20,7 @@ describe('Client setup and migrations', function() {
       replication: cassandraConfig.replication
     })
     expect(res.info.isSchemaInAgreement).to.be.true
-    expect(cassandraClient.metadata.keyspace).to.have.any.keys('ks1')
+    expect(cassandraClient.metadata.keyspaces).to.have.any.keys('ks1')
   });
 
 });

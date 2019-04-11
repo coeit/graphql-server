@@ -1,5 +1,5 @@
 {
-  "contactPoints": ["localhost"],
+  "contactPoints": ["0.0.0.0"],
   "localDataCenter": "datacenter1",
   "keyspace": "ks1",
   "replication": "{'class': 'SimpleStrategy', 'replication_factor': 1}"
