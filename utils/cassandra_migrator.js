@@ -1,3 +1,6 @@
+const fs = require('fs')
+const path = require('path')
+
 /**
  * Uses the instance cassandraClient to create the argument keyspace if it not
  * already exists with the argument replication.
@@ -17,7 +20,8 @@ module.exports.createKeyspaceIfNotExits = function({
   replication
 }) {
   return cassandraClient.execute(
-    `CREATE KEYSPACE IF NOT EXISTS ${keyspace} WITH replication = ${replication}`)
+    `CREATE KEYSPACE IF NOT EXISTS ${keyspace} WITH replication = ${replication}`
+  )
 }
 
 /**
@@ -100,4 +104,75 @@ module.exports.hasMigrationBeenExecuted = async function({
   } else {
     return false
   }
+}
+
+/**
+ * Executes the migration of argument 'migrationName' using 'upFunk' if it not
+ * already has been executed in the past (see hasMigrationBeenExecuted for
+ * details).
+ *
+ * @param {object} cassandraClient - The connected cassandraClient having set a 
+ * keyspace.
+ * @param {string} migrationName - The name of the migration for which to find
+ * out if it has been executed and thus stored within the migrations table. 
+ * @param {function} upFunk - The function to invoke to execute the migration.
+ * The function must accept the named argument {cassandraClient:
+ * cassandraClient}. It may be async.
+ *
+ * @return {object} The result of invoking 'upFunk' or 'true' if the migration
+ * already had been executed in the past.
+ */
+module.exports.executeMigrationIfNotAlreadyDone = async function({
+  cassandraClient,
+  migrationName,
+  upFunk
+}) {
+  let hasMigBeenExecuted = await module.exports.hasMigrationBeenExecuted({
+    cassandraClient: cassandraClient,
+    migrationName: migrationName
+  })
+  if (hasMigBeenExecuted) {
+    console.log(
+      `Cassandra migration '${migrationName}' has already been executed`)
+    return true
+  } else {
+    return await upFunk({
+      cassandraClient: cassandraClient
+    })
+  }
+}
+
+/**
+ * Execute all migrations found in directory 'path2MigrationsDir'. All files
+ * ending in '.js' are considered migrations and are expected to export at
+ * least a function called 'up'. This function should receive a single named
+ * argument {cassandraClient}.
+ *
+ * @param {object} cassandraClient - The connected cassandraClient having set a 
+ * keyspace.
+ * @param {string} path2MigrationsDir - The valid file path to the directory
+ * containing all migrations to be executed.
+ *
+ * @return {array} the cumulative returns of each migration
+ */
+module.exports.migrate = async function({
+  cassandraClient,
+  path2MigrationsDir
+}) {
+  return await Promise.all(fs.readdirSync(path2MigrationsDir).filter(f => {
+    return !!f.match(/\.js$/)
+  }).map(async f => {
+    let migName = f.replace(/\.js$/, '')
+    let upFunk = require(path.resolve(path.join(path2MigrationsDir,
+      f))).up
+    if (upFunk === undefined) {
+      throw new Error(
+        `Migration '${f}' does not export a function 'up'.`)
+    }
+    return await module.exports.executeMigrationIfNotAlreadyDone({
+      cassandraClient: cassandraClient,
+      migrationName: migName,
+      upFunk: upFunk
+    })
+  }))
 }

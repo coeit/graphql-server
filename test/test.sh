@@ -15,7 +15,7 @@ do
 	sleep 2
 	waited=$(expr $waited + 2)
 done
-echo -e '\nCassandra server up and running.\n'
+echo -e '\nCassandra server is up and running.\n'
 
 # Run the tests
 mocha test/test.js --exit

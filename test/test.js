@@ -1,5 +1,7 @@
 const expect = require('chai').expect
+const fs = require('fs')
 const path = require('path')
+const tmp = require('tmp')
 const cassandra = require('cassandra-driver')
 const cassandraMigrator = require(path.join(__dirname, '..', 'utils',
   'cassandra_migrator.js'))
@@ -40,7 +42,8 @@ describe('Client setup and migrations', function() {
     expect(selRes.rows.length).to.equal(0)
   })
 
-  it('Should be able to insert into and find migrations in the migrations table',
+  it(
+    'Should be able to insert into and find migrations in the migrations table',
     async function() {
       let cassandraClient = new cassandra.Client(cassandraConfig)
       let migrationName = 'testMigration'
@@ -59,5 +62,52 @@ describe('Client setup and migrations', function() {
       })
       expect(res).to.be.true
     })
+
+    it('Should execute a single migration',
+      async function() {
+        let cassandraClient = new cassandra.Client(cassandraConfig)
+        try {
+          let tableRes = await cassandraClient.execute(
+            'SELECT * FROM test_table')
+        } catch (selErr) {
+          expect(selErr.constructor.name).to.equal('ResponseError')
+          expect(selErr.message).to.equal('unconfigured table test_table')
+        }
+        let mig = require(path.join(__dirname,
+          'cassandra_migration_mock.js'))
+        let migRes = await cassandraMigrator.executeMigrationIfNotAlreadyDone({
+          cassandraClient: cassandraClient,
+          migrationName: 'cassandra_migration_mock',
+          upFunk: mig.up
+        })
+        expect(migRes.info.isSchemaInAgreement).to.be.true
+        let tableRes = await cassandraClient.execute(
+          'SELECT * FROM test_table')
+        expect(tableRes.rows.length).to.equal(0)
+        // Clean up:
+        await cassandraClient.execute('DROP TABLE test_table')
+      })
+
+    it('Should execute all migration files in a dedicated directory',
+      async function() {
+        let cassandraClient = new cassandra.Client(cassandraConfig)
+        let tmpDir = tmp.dirSync()
+        let testMigPath = path.resolve(path.join(__dirname,
+          'cassandra_migration_mock.js'))
+        fs.copyFileSync(testMigPath, path.join(tmpDir.name,
+          'cassandra_migration_mock.js'))
+        let migRes = await cassandraMigrator.migrate({
+          cassandraClient: cassandraClient,
+          path2MigrationsDir: tmpDir.name
+        })
+        expect(migRes.length).to.equal(1)
+        expect(migRes[0].info.isSchemaInAgreement).to.be.true
+        let tableRes = await cassandraClient.execute(
+          'SELECT * FROM test_table')
+        expect(tableRes.rows.length).to.equal(0)
+        // Clean up:
+        await cassandraClient.execute('DROP TABLE test_table')
+        tmpDir.removeCallback()
+      })
 
 })
