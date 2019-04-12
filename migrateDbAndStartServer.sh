@@ -26,5 +26,23 @@ if [ -d ./seeders ]; then
 	fi
 fi
 
+# Wait until the Cassandra server is up and running
+waited=0
+until node ./utils/testCassandraServerAvailable.js
+do
+	if [ $waited == 240 ]; then
+		echo -e '\nERROR: Time out reached while waiting for Cassandra server to be available.\n'
+		exit 1
+	fi
+	sleep 2
+	waited=$(expr $waited + 2)
+done
+
+# Run Cassandra migrations
+if ! ./utils/cassandra_migrator_cli.js; then
+	echo -e '\nERROR: Migrating the Cassandra database(s) caused an error.\n'
+	exit 1
+fi
+
 # Start GraphQL-server
 npm start # acl
