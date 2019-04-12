@@ -5,6 +5,7 @@ const csv_parse = require('csv-parse');
 const fs = require('fs');
 const awaitifyStream = require('awaitify-stream');
 const validatorUtil = require('./validatorUtil');
+const admZip = require('adm-zip');
 
 
 /**
@@ -61,7 +62,43 @@ exports.parseXlsx = function(bstr) {
     XLSX.utils.sheet_to_json(
       workbook.Sheets[sheet_name_list[0]])
   );
-}
+};
+
+/**
+ * Function that will delete a file if it exists and is insensitive to the
+ * case when a file not exist.
+ *
+ * @param {String} path - A path to the file
+ */
+exports.deleteIfExists = function (path){
+    console.log(`Removing ${path}`);
+    fs.unlink(path, function (err){
+        // file may be already deleted
+    });
+};
+
+/**
+ * Function deletes properties that contain string values "NULL" or "null".
+ *
+ * @param {Object} pojo - A plain old JavaScript object.
+ *
+ * @return {Object} A modified clone of the argument pojo in which all String
+ * "NULL" or "null" values are replaced with literal nulls.
+ */
+exports.replacePojoNullValueWithLiteralNull = function(pojo) {
+    if (pojo === null) {
+        return null
+    }
+    let res = Object.assign({}, pojo);
+    Object.keys(res).forEach((k) => {
+        if(res[k].localeCompare("NULL", undefined, { sensitivity: 'accent' }) === 0){
+            //res[k] = null
+            delete res[k];
+        }
+    });
+    return res
+};
+
 
 /**
 * Parse by streaming a csv file and create the records in the correspondant table
@@ -72,11 +109,19 @@ exports.parseXlsx = function(bstr) {
 * @param {array|boolean|function} cols - Columns as in csv-parser options.(true if auto-discovered in the first CSV line).
 */
 exports.parseCsvStream = async function(csvFilePath, model, delim, cols) {
+
   if (!delim) delim = ",";
   if (typeof cols === 'undefined') cols = true;
   console.log("TYPEOF", typeof model);
   // Wrap all database actions within a transaction:
   let transaction = await model.sequelize.transaction();
+
+  let addedFilePath = csvFilePath.substr(0, csvFilePath.lastIndexOf(".")) + ".json";
+  let addedZipFilePath = csvFilePath.substr(0, csvFilePath.lastIndexOf(".")) + ".zip";
+
+  console.log(addedFilePath);
+  console.log(addedZipFilePath);
+
   try {
     // Pipe a file read-stream through a CSV-Reader and handle records asynchronously:
     let csvStream = awaitifyStream.createReader(
@@ -88,10 +133,19 @@ exports.parseCsvStream = async function(csvFilePath, model, delim, cols) {
       )
     );
 
+    // Create an output file stream
+    let addedRecords = awaitifyStream.createWriter(
+        fs.createWriteStream(addedFilePath)
+    );
+
     let record;
     let errors = [];
 
     while (null !== (record = await csvStream.readAsync())) {
+
+        console.log(record);
+        record = exports.replacePojoNullValueWithLiteralNull(record);
+        console.log(record);
 
         let error = validatorUtil.ifHasValidatorFunctionInvoke('validatorForCreate', model, record);
 
@@ -105,6 +159,12 @@ exports.parseCsvStream = async function(csvFilePath, model, delim, cols) {
 
             await model.create(record, {
                 transaction: transaction
+            }).then(created => {
+
+                // this is async, here we just push new line into the parallel thread
+                // synchronization goes at endAsync;
+                addedRecords.writeAsync(`${JSON.stringify(created)}\n`);
+
             }).catch(error => {
                 console.log(`Caught sequelize error during CSV batch upload: ${JSON.stringify(error)}`);
                 error.record = record;
@@ -113,6 +173,9 @@ exports.parseCsvStream = async function(csvFilePath, model, delim, cols) {
 
         }
     }
+
+    // close the addedRecords file so it can be sent afterwards
+    await addedRecords.endAsync();
 
     if(errors.length > 0) {
       let message = "Some records could not be submitted. No database changes has been applied.\n";
@@ -127,8 +190,27 @@ exports.parseCsvStream = async function(csvFilePath, model, delim, cols) {
 
     await transaction.commit();
 
+    // zip comitted data and return a corresponding file path
+    let zipper = new admZip();
+    zipper.addLocalFile(addedFilePath);
+    await zipper.writeZip(addedZipFilePath);
+
+    console.log(addedZipFilePath);
+
+    // At this moment the parseCsvStream caller is responsible in deleting the
+    // addedZipFilePath
+    return addedZipFilePath;
+
   } catch (error) {
+
     await transaction.rollback();
+
+    exports.deleteIfExists(addedFilePath);
+    exports.deleteIfExists(addedZipFilePath);
+
     throw error;
+
+  } finally {
+      exports.deleteIfExists(addedFilePath);
   }
 };

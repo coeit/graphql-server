@@ -40,7 +40,9 @@
     "sync-request": "^6.0.0",
     "tmp": "^0.1.0",
     "uuidv4": "^2.0.0",
-    "xlsx": "^0.12.11"
+    "xlsx": "^0.12.11",
+    "linked-list": "^2.0.0",
+    "adm-zip": "^0.4.13"
   },
   "devDependencies": {
     "axios": "^0.18.0",
