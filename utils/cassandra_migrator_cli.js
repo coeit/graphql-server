@@ -8,6 +8,7 @@ const cassandraMigrator = require(path.join(__dirname, 'cassandra_migrator.js'))
 
 async function migrate() {
   try {
+    // Create Keyspace:
     let cassandraConfigNoKeyspace = Object.assign({}, cassandraConfig)
     delete cassandraConfigNoKeyspace.keyspace
     let cassandraClient = new cassandra.Client(cassandraConfigNoKeyspace)
@@ -15,6 +16,8 @@ async function migrate() {
       cassandraClient: cassandraClient,
       keyspace: cassandraConfig.keyspace
     })
+    // Run Migrations:
+    cassandraClient = new cassandra.Client(cassandraConfig)
     await cassandraMigrator.migrate({
       cassandraClient: cassandraClient,
       path2MigrationsDir: path.resolve(path.join(__dirname, '..',
@@ -22,6 +25,7 @@ async function migrate() {
     })
     return process.exit(0)
   } catch (exception) {
+    console.log(`Error while setting up Cassandra:\n${exception}`)
     return process.exit(1)
   }
 }
