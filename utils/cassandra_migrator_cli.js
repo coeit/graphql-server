@@ -19,6 +19,9 @@ async function migrate() {
     })
     // Run Migrations:
     cassandraClient = new cassandra.Client(cassandraConfig)
+    await cassandraMigrator.createMigrationTableIfNotExists({
+      cassandraClient: cassandraClient
+    })
     await cassandraMigrator.migrate({
       cassandraClient: cassandraClient,
       path2MigrationsDir: path.resolve(path.join(__dirname, '..',
