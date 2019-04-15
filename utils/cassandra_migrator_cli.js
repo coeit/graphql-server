@@ -14,7 +14,8 @@ async function migrate() {
     let cassandraClient = new cassandra.Client(cassandraConfigNoKeyspace)
     await cassandraMigrator.createKeyspaceIfNotExits({
       cassandraClient: cassandraClient,
-      keyspace: cassandraConfig.keyspace
+      keyspace: cassandraConfig.keyspace,
+      replication: cassandraConfig.replication
     })
     // Run Migrations:
     cassandraClient = new cassandra.Client(cassandraConfig)
