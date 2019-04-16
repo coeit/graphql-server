@@ -25,7 +25,7 @@ async function migrate() {
     await cassandraMigrator.migrate({
       cassandraClient: cassandraClient,
       path2MigrationsDir: path.resolve(path.join(__dirname, '..',
-        'migrations_cassandra'))
+        'migrations-cassandra'))
     })
     return process.exit(0)
   } catch (exception) {
