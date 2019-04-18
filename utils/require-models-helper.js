@@ -35,7 +35,7 @@ module.exports.patchModel = function({
   patchesPath
 }) {
   if (undefined === validationsPath) {
-    validationsPath = models.exports.validationsPathDefault
+    validationsPath = module.exports.validationsPathDefault
   }
   let validatorPatcher = path.resolve(path.join(validationsPath,
     modelFile))
@@ -44,7 +44,7 @@ module.exports.patchModel = function({
   }
 
   if (undefined === patchesPath) {
-    patchesPath = models.exports.patchesPathDefault
+    patchesPath = module.exports.patchesPathDefault
   }
   let logicPatcher = path.resolve(path.join(patchesPath, modelFile))
   if (fs.existsSync(logicPatcher)) {
