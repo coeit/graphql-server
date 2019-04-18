@@ -1,5 +1,19 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('fs')
+const path = require('path')
+
+/**
+ * @var {string} validationsPathDefault - The default path to the validations
+ * directory.
+ */
+module.exports.validationsPathDefault = path.resolve(path.join(__dirname, '..',
+  'validations'))
+
+/**
+ * @var {string} patchesPathDefault - The default path to the patches
+ * directory.
+ */
+module.exports.patchesPathDefault = path.resolve(path.join(__dirname, '..',
+  'patches'))
 
 /**
  * Patches the argument model with validations and logic model patches, if any
@@ -7,22 +21,35 @@ const path = require('path');
  *
  * @param {object} model- The instantiated (already required) model
  * @param {string} modelFile - The valid path to the model file
+ * @param {string} validationsPath - The valid path to the validations
+ * directory.If undefined the module 's default will be used.
+ * @param {string} patchesPath - The valid path to the patches directory. If
+ * undefined this module's default will be used.
  *
  * @return {object} The patched argument model
  */
 module.exports.patchModel = function({
-    model,
-    modelFile
-  }) {
-    let validator_patch = path.join('./validations', modelFile);
-    if (fs.existsSync(validator_patch)) {
-      model = require(`./${validator_patch}`).validator_patch(model);
-    }
+  model,
+  modelFile,
+  validationsPath,
+  patchesPath
+}) {
+  if (undefined === validationsPath) {
+    validationsPath = models.exports.validationsPathDefault
+  }
+  let validatorPatcher = path.resolve(path.join(validationsPath,
+    modelFile))
+  if (fs.existsSync(validatorPatcher)) {
+    model = require(validatorPatcher).validator_patch(model)
+  }
 
-    let patches_patch = path.join('./patches', modelFile);
-    if (fs.existsSync(patches_patch)) {
-      model = require(`./${patches_patch}`).logic_patch(model);
-    }
+  if (undefined === patchesPath) {
+    patchesPath = models.exports.patchesPathDefault
+  }
+  let logicPatcher = path.resolve(path.join(patchesPath, modelFile))
+  if (fs.existsSync(logicPatcher)) {
+    model = require(logicPatcher).logic_patch(model)
+  }
   return model
 }
 
