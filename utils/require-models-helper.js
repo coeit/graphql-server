@@ -90,7 +90,9 @@ module.exports.requireModels = function({
       })
 
       if (modelsIndex[model.name])
-        throw Error(`Duplicated model name ${model.name}`)
+        throw Error(
+          `Duplicated model name '${model.name}' required from file ${path.resolve(path.join(modelsDir, file))}`
+        )
 
       modelsIndex[model.name] = model
 
