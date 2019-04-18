@@ -9,7 +9,7 @@ var models = {}
 requireModelsHelper.requireModels({
   modelsDir: path.resolve('models'),
   modelsIndex: models,
-  function(filePath) {
+  requireFunk: function(filePath) {
     return sequelize['import'](filePath)
   }
 })
