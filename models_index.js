@@ -9,8 +9,8 @@ var models = {}
 requireModelsHelper.requireModels({
   modelsDir: path.resolve('models'),
   modelsIndex: models,
-  filePath => {
-    sequelize['import'](filePath)
+  function(filePath) {
+    return sequelize['import'](filePath)
   }
 })
 // Important: creates associations based on associations defined in associate
