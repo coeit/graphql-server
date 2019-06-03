@@ -1,0 +1,7 @@
+{ 
+  "endpoint": "http://sdb_minio:9000",
+  "accessKeyId": "sciencedb",
+  "secretAccessKey": "sciencedb",
+  "s3ForcePathStyle": true,
+  "signatureVersion": "v4"
+}
