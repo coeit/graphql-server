@@ -1,6 +1,7 @@
 const AWS = require('aws-sdk')
 const path = require('path')
 const s3Settings = require(path.join(__dirname, '..', 'config', 'minio.json'))
+const Joi = require('joi')
 
 /**
  * @constant {object} The initialized AWS.S3 instance, the connection to the
@@ -32,3 +33,38 @@ module.exports.fileExists = async function(bucket, file) {
     return false
   }
 }
+
+/**
+ * @constant {object} An extended version of Joi including a validator for a
+ * Minio-URL checking if the file indicated by the URL truly exists.
+ */
+module.exports.joiMinioUrlFileExists = Joi.extend((joi) => ({
+  base: joi.string(),
+  name: 'string',
+  language: {
+    minioUrlFileExist: 'Minio File must exist in Bucket defined by the URL.',
+  },
+  rules: [{
+    name: 'minioUrlFileExist',
+    async validate(params, value, state, options) {
+
+      let regMatches = value.match(/([^/]+)\/([^/]+)\/([^/]+)$/)
+      let minioUrl, minioBucket, minioFileName
+      if (regMatches !== null) {
+        minioUrl = regMatches[1]
+        minioBucket = regMatches[2]
+        minioFileName = regMatches[3]
+      }
+      if (null === regMatches || module.exports.s3.endpoint.host !==
+        minioUrl || !module.exports
+        .fileExists(minioBucket, minioFileName)) {
+        // Generate an error, state and options need to be passed
+        return this.createError('string.minioUrlFileExist', {
+          v: value
+        }, state, options);
+      }
+
+      return value; // Everything is OK
+    }
+  }]
+}))
