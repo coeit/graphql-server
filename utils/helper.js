@@ -96,7 +96,7 @@ const math = require('mathjs');
       let fieldClauses = []
       strAttributes.forEach(function(x) {
         let fieldWhereClause = {}
-        if (x !== "id") {
+        if (x !== "id" && ! /_id$/i.test(x) ) {
           fieldWhereClause[x] = {
             $like: "%" + req.query.filter + "%"
           }
