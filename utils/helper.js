@@ -289,7 +289,7 @@ f   *
    * @param  {Object} order GraphQL order options to be used
    * @return {Array}        order List of records
    */
-  module.exports.orderedRecords = function(matchingRecords, order = [{field, order}]) {
+  module.exports.orderRecords = function(matchingRecords, order = [{field, order}]) {
     return _.orderBy(matchingRecords,_.map(order,'field'),_.map(order,'order').map(x => x.toLowerCase()));
   }
 
