@@ -1,5 +1,6 @@
 const objectAssign = require('object-assign');
 const math = require('mathjs');
+const _ = require('lodash');
 
 
   /**
@@ -279,3 +280,36 @@ f   *
      return where_statement;
 
    }
+
+
+   /**
+   * orderedRecords - javaScript function for ordering of records based on GraphQL orderInput for local post-processing
+   *
+   * @param  {Array} matchingRecords  List of records to be ordered
+   * @param  {Object} order GraphQL order options to be used
+   * @return {Array}        order List of records
+   */
+  module.exports.orderedRecords = function(matchingRecords, order = [{field, order}]) {
+    return _.orderBy(matchingRecords,_.map(order,'field'),_.map(order,'order').map(x => x.toLowerCase()));
+  }
+
+  /**
+   * paginateRecords - post-precossing pagination of ordered records
+   *
+   * @param  {Array} orderedRecords  List of records to be paginated
+   * @param  {Object} paginate GraphQL paginate argument
+   * @return {Array}        paginated List of records
+   */
+  module.exports.paginateRecords = function(orderedRecords, {first, cursor}) {
+    return orderedRecords.slice(0,first);
+  }
+
+  /**
+   * toGraphQLConnectionObject - translate an array of records into a GraphQL connection
+   *
+   * @param  {Array} paginatedRecords  List of records to be translated
+   * @return {Array}        
+   */
+  module.exports.toGraphQLConnectionObject = function(paginatedRecords) {
+
+  }
